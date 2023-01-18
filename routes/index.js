@@ -12,7 +12,7 @@ connection.connect();
 
 /* GET tasks */
 router.get('/tasks', function(req, res, next) {
-  connection.query(`SELECT * FROM tasks`, (error, results, fields) => {
+  connection.query(`SELECT * FROM tasks WHERE userId = ('${req.query.id}')`, (error, results, fields) => {
     if (error) throw error;
     res.send({results});    
   })
@@ -20,7 +20,7 @@ router.get('/tasks', function(req, res, next) {
 
 /* INSERT tasks */
 router.post('/tasks', function(req, res, next) {
-  connection.query(`INSERT INTO tasks (task) VALUES ('${req.body.todo}')`, (error, results, fields) => {
+  connection.query(`INSERT INTO tasks (task,userId) VALUES ('${req.body.todo}','${req.body.user}')`, (error, results, fields) => {
     if (error) throw error;
     res.send({results});    
   })
@@ -49,6 +49,16 @@ router.put('/tasks/:id', function (req, res, next) {
     res.send({results});
   },
 )
+})
+
+router.post('/login',function (req, res, next){
+  connection.query(`SELECT * FROM users WHERE username = ('${req.body.username}') AND password=('${req.body.password}')`,(error,results, fields) =>{
+    if (error) {
+      throw(error);
+    } 
+    res.send(results);
+  },
+  )
 })
 
 module.exports = router;
