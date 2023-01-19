@@ -10,16 +10,41 @@ const connection = mysql.createConnection({
 
 connection.connect();
 
-/* GET tasks */
-router.get('/tasks', function(req, res, next) {
-  connection.query(`SELECT * FROM tasks WHERE userId = ('${req.query.id}')`, (error, results, fields) => {
-    if (error) throw error;
-    res.send({results});    
+/* 
+  JWT
+  Permissions Setup - React 
+  Authorization Header
+  Hashing and Salting
+  Tokens for Auth
+*/
+
+const checkUser = (req, res, next) => {
+  connection.query(`SELECT * FROM users WHERE id = ${req.query.id || req.body.user}`, (error, results, fields) => {
+    if (results[0].role === 1){
+      req.body.permissionLevel = 1;
+    }
+    if (results.length > 0){
+      next();
+    }else{
+      res.send('Not a valid user');
+    }
   })
+}
+
+/* GET tasks */
+router.get('/tasks', checkUser, (req, res, next) => {
+  if (req.body.permissionLevel === 1){
+    connection.query(`SELECT * FROM tasks WHERE userId = ('${req.query.id}')`, (error, results, fields) => {
+      if (error) throw error;
+      res.send({results});    
+    })
+  }else{
+    res.send('Not valid permissions');
+  }
 });
 
 /* INSERT tasks */
-router.post('/tasks', function(req, res, next) {
+router.post('/tasks', checkUser, function(req, res, next) {
   connection.query(`INSERT INTO tasks (task,userId) VALUES ('${req.body.todo}','${req.body.user}')`, (error, results, fields) => {
     if (error) throw error;
     res.send({results});    
