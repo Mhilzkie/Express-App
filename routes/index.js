@@ -1,89 +1,96 @@
-var express = require('express');
-var router = express.Router();
-const mysql = require('mysql');
-const connection = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'todo'
-});
-
-connection.connect();
-
-/* 
-  JWT
-  Permissions Setup - React 
-  Authorization Header
-  Hashing and Salting
-  Tokens for Auth
-*/
-
-const checkUser = (req, res, next) => {
-  connection.query(`SELECT * FROM users WHERE id = ${req.query.id || req.body.user}`, (error, results, fields) => {
-    if (results[0].role === 1){
-      req.body.permissionLevel = 1;
-    }
-    if (results.length > 0){
-      next();
-    }else{
-      res.send('Not a valid user');
-    }
-  })
-}
+const task = require('../models/task').model;
+const express = require('express');
+const router = express.Router();
+const app = require('../app');
 
 /* GET tasks */
-router.get('/tasks', checkUser, (req, res, next) => {
-  if (req.body.permissionLevel === 1){
-    connection.query(`SELECT * FROM tasks WHERE userId = ('${req.query.id}')`, (error, results, fields) => {
-      if (error) throw error;
-      res.send({results});    
-    })
-  }else{
-    res.send('Not valid permissions');
+router.get('/tasks/:id', async (req, res, next) => {
+  try{
+    const tasks = await task.findAll({
+      where:{
+        id: req.query.id
+      }
+    });
+    res.send({result:tasks});
+
+  }catch(error){
+    res.send(error);
   }
-});
+  });
+router.get('/tasks', async(req, res) => {
+  try{
+    const tasks = await task.findAll();
+    res.send({result:tasks});
+
+  }catch(error){
+    res.send(error);
+  }
+  });
 
 /* INSERT tasks */
-router.post('/tasks', checkUser, function(req, res, next) {
-  connection.query(`INSERT INTO tasks (task,userId) VALUES ('${req.body.todo}','${req.body.user}')`, (error, results, fields) => {
-    if (error) throw error;
-    res.send({results});    
-  })
+router.post('/tasks', async(req, res) => {
+  try{
+    const task = await task.create({
+      task: req.body.todo,
+      userId: req.body.user
+    });
+  res.send({result:task});
+}catch(error){
+  res.status(500).send(error);
+  console.log("Im the Error");
+}
 });
 
-router.delete('/tasks/:id', function (req, res, next) {
-  var idtask = { id: req.params.id }
-  console.log(req.params.id);
-  
-  // connection.query(`DELETE FROM tasks WHERE id = ('${req.params.id}')`, (error,results, fields)=> {
-    connection.query(`UPDATE tasks SET deletedAt = '${new Date().toISOString()}' WHERE id=${req.params.id}`,(error,results, fields)=> {  
-    if (error) {
-      throw(error);
-    } 
-    res.send({results});
-    
-  },
-)
-})
-
-router.put('/tasks/:id', function (req, res, next) {
-  connection.query(`UPDATE tasks SET task = ('${req.body.task}') WHERE id = ('${req.params.id}')`, (error,results, fields)=> {
-    if (error) {
-      throw(error);
-    } 
-    res.send({results});
-  },
-)
-})
-
-router.post('/login',function (req, res, next){
-  connection.query(`SELECT * FROM users WHERE username = ('${req.body.username}') AND password=('${req.body.password}')`,(error,results, fields) =>{
-    if (error) {
-      throw(error);
-    } 
-    res.send(results);
-  },
-  )
+// DELETE Task
+router.delete('/tasks/:id', async (req, res, next) => {
+  try{
+    await task.destroy({
+      where:{
+        id:req.params.id
+      }
+    });
+    res.send({message:'Task Deleted'});
+  }catch(error){
+    res.send(error);
+  }
 })
 
 module.exports = router;
+
+// router.put('/tasks/:id', function (req, res, next) {
+//   connection.query(`UPDATE tasks SET task = ('${req.body.task}') WHERE id = ('${req.params.id}')`, (error,results, fields)=> {
+//     if (error) {
+//       throw(error);
+//     } 
+//     res.send({results});
+//   },
+// )
+// })
+
+// router.post('/login',function (req, res, next){
+//   connection.query(`SELECT * FROM users WHERE username = ('${req.body.username}') AND password=('${req.body.password}')`,(error,results, fields) =>{
+//     if (error) {
+//       throw(error);
+//     } 
+//     res.send(results);
+//   },
+//   )
+// })
+
+// router.post('/register', function(req, res, next) {
+//   connection.query(`INSERT INTO users (username,password) VALUES ('${req.body.username}','${req.body.password}')`, (error, results, fields) => {
+//     if (error) throw error;
+//     res.send({results});    
+//   })
+// });
+
+// router.post('/loginsuccess',function (req, res, next){
+//   connection.query(`SELECT * FROM users WHERE username = ('${req.body.username}') AND password=('${req.body.password}')`,(error,results, fields) =>{
+//     if (error) {
+//       throw(error);
+//     } 
+//     res.send(results);
+//   },
+//   )
+// })
+// module.exports = router;
